@@ -1,6 +1,6 @@
 // TODO: consider putting scope start curly brace on new line instead of putting so many empty lines for better readability
 
-#include "inih/ini.h"
+#include "third-party/inih/ini.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>

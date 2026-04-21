@@ -8,8 +8,8 @@ all: main.o ini.o
 main.o: main.c
 	gcc $(CFLAGS) -c main.c
 
-ini.o: ./inih/ini.c
-	gcc $(CFLAGS) -DINI_ALLOW_INLINE_COMMENTS=1 -DINI_INLINE_COMMENT_PREFIXES="\"#\"" -c inih/ini.c
+ini.o: ./third-party/inih/ini.c
+	gcc $(CFLAGS) -DINI_ALLOW_INLINE_COMMENTS=1 -DINI_INLINE_COMMENT_PREFIXES="\"#\"" -c ./third-party/inih/ini.c
 
 clean:
 	rm main
