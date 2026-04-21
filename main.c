@@ -162,17 +162,17 @@ int main(int argc, char* argv[])
 
         "\n[ General ]\n\n\t"
 
-        "block_size: \"%u\"\n\t"
-        "rle1_enabled: \"%d\"\n\t"
+        "block_size: %u\n\t"
+        "rle1_enabled: %d\n\t"
         "bwt_type: \"%s\"\n\t"
-        "mtf_enabled: \"%d\"\n\t"
-        "rle2_enabled: \"%d\"\n\t"
-        "huffman_enabled: \"%d\"\n"
+        "mtf_enabled: %d\n\t"
+        "rle2_enabled: %d\n\t"
+        "huffman_enabled: %d\n"
 
         "\n[ Performance ]\n\n\t"
 
-        "benchmark_mode: \"%d\"\n\t"
-        "output_metrics: \"%d\"\n"
+        "benchmark_mode: %d\n\t"
+        "output_metrics: %d\n"
 
         "\n[ Paths ]\n\n\t"
 
