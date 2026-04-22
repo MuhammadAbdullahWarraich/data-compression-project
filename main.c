@@ -5,7 +5,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 #include <limits.h>
+#include "bwt.c"
 
 typedef struct
 {
@@ -191,6 +193,29 @@ int main(int argc, char* argv[])
         config.input_directory,
         config.output_directory
     );
+
+    //TEST STRING -- SAMPLE IMPLEMENTATION
+
+    uc input[] = "ABBBCCCCD";
+    size_t len = strlen((char *)input);
+
+    uc *encoded = malloc(len + 1);
+    uc *decoded = malloc(len + 1);
+    int primary_index = -1;
+
+    bwt_encode(input, len, encoded, &primary_index);
+    printf("Input:         %s\n", input);
+    printf("Encoded:       %s\n", encoded);
+    printf("Primary index: %d\n", primary_index);
+
+    bwt_decode(encoded, len, primary_index, decoded);
+    printf("Decoded:       %s\n", decoded);
+    printf("Match:         %s\n", strcmp((char *)input, (char *)decoded) == 0 ? "YES" : "NO");
+
+    free(encoded);
+
+
+
 
     return 0;
 }
