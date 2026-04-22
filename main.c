@@ -15,6 +15,7 @@ typedef struct
         UINT_MAX >= 900 * 1024,
         "assumptions for optimum alignment and/or different allowed values of config.ini violated"
     );
+    // TODO: replace char* with stack-based C-strings of fixed size
     char *input_directory;
     char *output_directory;
     char *bwt_type;
