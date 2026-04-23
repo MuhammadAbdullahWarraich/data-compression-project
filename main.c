@@ -150,6 +150,23 @@ static int handler(void* user, const char* section, const char* name, const char
     return 1;
 }
 
+void rle1_encode(const unsigned char *input, size_t len, unsigned char *output, size_t *out_len);
+
+void test_rle() {
+    const unsigned char *input = "aaabccdadd";
+    size_t input_size = strlen(input);
+    size_t out_len = 0;
+
+    unsigned char *output = malloc(2 * input_size);
+    rle1_encode(input, input_size, output, &out_len);
+    printf(
+            "input: \"%s\"\n"
+            "output: \"%s\"\n",
+            input,
+            output
+          );
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -214,9 +231,9 @@ int main(int argc, char* argv[])
 
     free(encoded);
 
-
-
+    test_rle();
 
     return 0;
 }
+
 
