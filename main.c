@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include "bwt.c"
+#include "block.c"
 
 typedef struct
 {
@@ -167,6 +168,32 @@ void test_rle() {
           );
 }
 
+void test_blocks()
+{
+    FILE *f = fopen("test_input.bin", "wb");
+    fwrite("AAABBBCCCDDDEEE", 1, 15, f);
+    fclose(f);
+
+    BlockManager *mgr = divide_into_blocks("test_input.bin", 4);
+    printf("num_blocks: %d\n", mgr->num_blocks);
+    for (int i = 0; i < mgr->num_blocks; i++){
+        printf("block[%d]: size=%zu data=\"%.*s\"\n", i,mgr->blocks[i].size, (int)mgr->blocks[i].size,mgr->blocks[i].data);
+    }
+    reassemble_blocks(mgr, "test_output.bin");
+
+    char reconstructed[256] = {0};
+    f = fopen("test_output.bin", "rb");
+    fread(reconstructed, 1, 255, f);
+    fclose(f);
+
+    if (strcmp(reconstructed, "AAABBBCCCDDDEEE") == 0)
+        printf("match: yes\n");
+    else
+        printf("match: no\n");
+
+    free_block_manager(mgr);
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -232,6 +259,9 @@ int main(int argc, char* argv[])
     free(encoded);
 
     test_rle();
+
+    printf("Block_Testing\n");
+    test_blocks();
 
     return 0;
 }
