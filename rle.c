@@ -21,9 +21,10 @@ static size_t push_number_into_cstr(unsigned char *cstr, size_t num) {
     return n;
 }
 
-#define WRITE_TO_OUTPUT()                               \
+#define WRITE_TO_OUTPUT(sep)                            \
         output[j++] = run_starter;                      \
         j += push_number_into_cstr(output+j, count);    \
+        output[j++] = sep;                              \
 
 void rle1_encode(const unsigned char *input, size_t len, unsigned char *output, size_t *out_len) {
     unsigned char run_starter = *input;
@@ -31,11 +32,43 @@ void rle1_encode(const unsigned char *input, size_t len, unsigned char *output, 
     size_t j = 0;
     for (size_t i = 0; i < len; i++) {
         if (input[i] == run_starter) { count += 1; continue; }
-        WRITE_TO_OUTPUT()
+        WRITE_TO_OUTPUT(',')
         run_starter = input[i];
         count = 1;
     }
-    WRITE_TO_OUTPUT()
-    *out_len = j;
-    output[*out_len] = '\0';
+    WRITE_TO_OUTPUT('\0')
+    *out_len = j-1;
 }
+
+size_t get_run_length(const char *input, size_t *offset) {
+    size_t i = *offset;
+    size_t ans = 0;
+    size_t exp = 1;
+    for (; input[i] <= '9' && input[i] >= '0'; i++) {
+        ans *= exp;
+        exp *= 10;
+        ans += (size_t)(input[i] - '0');
+    }
+    *offset = i;
+    return ans;
+}
+
+void rle1_decode(const unsigned char *input, size_t len, unsigned char *output, size_t *out_len) {
+    size_t i = 0;
+    size_t j = 0;
+    while (true) {
+        unsigned char c = input[i++];
+        size_t run_length = get_run_length(input, &i);
+
+        for (size_t x = 0; x < run_length; x++) {
+            output[j++] = c;
+        }
+
+        char comma_or_null = input[i];
+        if ('\0' == comma_or_null) return;
+        i += 1;
+    }
+    output[j] = '\0';
+    *out_len = j;
+}
+

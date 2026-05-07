@@ -151,6 +151,7 @@ static int handler(void* user, const char* section, const char* name, const char
 }
 
 void rle1_encode(const unsigned char *input, size_t len, unsigned char *output, size_t *out_len);
+void rle1_decode(const unsigned char *input, size_t len, unsigned char *output, size_t *out_len);
 
 void test_rle() {
     const unsigned char *input = "aaabccdadd";
@@ -160,10 +161,22 @@ void test_rle() {
     unsigned char *output = malloc(2 * input_size);
     rle1_encode(input, input_size, output, &out_len);
     printf(
-            "input: \"%s\"\n"
+            "encoding:\n\t"
+            "input: \"%s\"\n\t"
             "output: \"%s\"\n",
             input,
             output
+          );
+    unsigned char *output2 = malloc(2 * input_size);
+    size_t out2_len = 0;
+
+    rle1_decode(output, out_len, output2, &out2_len);
+    printf(
+            "decoding:\n\t"
+            "input: \"%s\"\n\t"
+            "output: \"%s\"\n",
+            output,
+            output2
           );
 }
 
