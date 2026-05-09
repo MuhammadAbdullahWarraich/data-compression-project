@@ -58,6 +58,8 @@ void get_rotations(Rotation *rots, uc *input, const size_t len)
         memcpy(rots[i].rotation, copy, len + 1);
         rots[i].index = (int)i;
     }
+
+    
     free(copy);
 }
 
@@ -168,17 +170,24 @@ Forward BWT transform
 */
 void bwt_encode ( uc *input , size_t len , uc *output , int *primary_index) 
 {
+
+    uc *input_sen = malloc(len + 1);
+    memcpy(input_sen, input, len);
+    input_sen[len] = 0x00;
+    size_t slen = len + 1; 
+
+
     Rotation *rots = malloc(len * sizeof(Rotation));
     if (!rots) return;
 
-    get_rotations(rots, input, len);
-    sort_rotations(rots, input, len);
+    get_rotations(rots, input_sen, len);
+    sort_rotations(rots, input_sen, len);
 
     unsigned char *encoded = encode(rots, len);
     memcpy(output, encoded, len + 1);
     free(encoded);
 
-    *primary_index = find_primary_index(rots, input, len);
+    *primary_index = find_primary_index(rots, input_sen, len);
     free_rotations(rots, len);
 
 }

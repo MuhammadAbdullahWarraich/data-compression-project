@@ -253,7 +253,7 @@ int main(int argc, char* argv[])
 
     //TEST STRING -- SAMPLE IMPLEMENTATION
 
-    uc input[] = "ABBBCCCCD";
+    uc input[] = "abab";
     size_t len = strlen((char *)input);
 
     uc *encoded = malloc(len + 1);

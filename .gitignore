@@ -1,0 +1,7 @@
+# Build outputs
+main
+*.o
+
+# Test artifacts
+*.bin
+
