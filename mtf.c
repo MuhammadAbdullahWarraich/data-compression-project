@@ -70,10 +70,27 @@ void mtf_encode(unsigned char *input, size_t len, unsigned char *output, size_t 
  * @param len : Length of input
  * @param output : Output buffer for decoded data
  */
-void mtf_decode(unsigned char *input, size_t len, unsigned char *output);
+void mtf_decode(unsigned char *input, size_t len, unsigned char *arr, size_t char_count, unsigned char *output) {
+    for (size_t i = 0; i < len; i++) {
+        output[i] = arr[input[i]];
+        if (input[i] != 0) {
+            // swapping
+            arr[input[i]]   ^= arr[0];
+            arr[0]          ^= arr[input[i]];
+            arr[input[i]]   ^= arr[0];
+        }
+    }
+}
+
 int main() {
     char input[] = {'f', 'e', 'd', 'c', 'b', 'a', SENTINEL, '\0'};
     const size_t input_size = 7;
+
+    printf("input: { ");
+    for (size_t i = 0; i < input_size; i++) {
+        printf("'%d' ", input[i]);
+    }
+    printf(" }\n");
 
     char output[input_size];
 
@@ -81,7 +98,7 @@ int main() {
     size_t char_count = 0;
 
     mtf_encode(input, input_size, output, &char_count, &sorted_chars);
-    printf("{ ");
+    printf("after encoding: { ");
     for (size_t i = 0; i < input_size; i++) {
         printf("'%d' ", output[i]);
     }
@@ -92,4 +109,11 @@ int main() {
     }
     printf(" }\n");
 
+    mtf_decode(output, input_size, sorted_chars, char_count, input);
+
+    printf("after decoding\n{ ");
+    for (size_t i = 0; i < input_size; i++) {
+        printf("'%d' ", input[i]);
+    }
+    printf(" }\n");
 }
