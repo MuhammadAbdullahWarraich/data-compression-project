@@ -132,6 +132,15 @@ void bwt_encode_meta(uc *input, size_t len, uc *output, size_t *primary_index);
  * @param output        : Output buffer for original data (must be len+1
  * bytes)
  */
-void bwt_decode(uc *input, size_t len, size_t primary_index, uc *output);
+__attribute__((deprecated(
+    "Pairs with the deprecated O(N^2) bwt_encode. Use bwt_decode_meta instead."))) void
+bwt_decode(uc *input, size_t len, size_t primary_index, uc *output);
+
+/*
+ * Inverse of bwt_encode_meta. The encoded stream is `len` bytes (the sentinel
+ * was elided) and primary_index records where it sat. This routine reinserts
+ * the sentinel internally and returns the original `len` bytes in `output`.
+ */
+void bwt_decode_meta(uc *input, size_t len, size_t primary_index, uc *output);
 
 #endif // BWT_H

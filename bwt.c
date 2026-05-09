@@ -34,8 +34,8 @@ void get_rotations(Rotation *rots, uc *input, const size_t len) {
 }
 
 int compare_rotations(const void *a, const void *b) {
-  return strcmp(((const Rotation *)a)->rotation,
-                ((const Rotation *)b)->rotation);
+  return strcmp((const char *)((const Rotation *)a)->rotation,
+                (const char *)((const Rotation *)b)->rotation);
 }
 
 void sort_rotations(Rotation *rots, uc *input, size_t len) {
@@ -68,9 +68,10 @@ uc *build_first_column(const uc *last_col, size_t len) {
 
 size_t find_primary_index(Rotation *rots, uc *input, size_t len) {
   for (size_t i = 0; i < len; i++) {
-    if (!strcmp((const char *)input, rots[i].rotation))
+    if (!strcmp((const char *)input, (const char *)rots[i].rotation))
       return i;
   }
+  return (size_t)-1;
 }
 
 size_t *build_ltf_mapping(const uc *first_col, const uc *last_col, size_t len) {
@@ -136,32 +137,7 @@ static void get_suffixes(Rotation *rots, uc *input, const size_t len) {
   }
 }
 
-static uc *encode_meta(Rotation *rots, uc *input, size_t len) {
-  unsigned char *final_meta = malloc(len + 1);
-
-  for (size_t i = 0; i < len; i++) {
-    if (rots[i].index == 0) {
-      final_meta[i] = input[len - 1];
-    } else {
-      final_meta[i] = input[rots[i].index - 1];
-    }
-  }
-
-  final_meta[len] = '\0';
-  return final_meta;
-}
-
-size_t find_primary_index_meta(Rotation *rots, unsigned char *input,
-                               size_t len) {
-  for (size_t i = 0; i < len; i++) {
-    if (rots[i].index == 0) {
-      return i;
-    }
-  }
-}
-
-void bwt_encode_meta(unsigned char *input, size_t len, unsigned char *output,
-                     size_t *primary_index) {
+void bwt_encode_meta(uc *input, size_t len, uc *output, size_t *primary_index) {
   uc *input_sen = malloc(len + 2);
   memcpy(input_sen, input, len);
   input_sen[len] = 0x00;
@@ -175,20 +151,19 @@ void bwt_encode_meta(unsigned char *input, size_t len, unsigned char *output,
   get_suffixes(rots, input_sen, slen);
   sort_rotations(rots, input_sen, slen);
 
-  uc *encoded = encode_meta(rots, input_sen, slen);
-  size_t sentinel_row = find_primary_index_meta(rots, input_sen, slen);
-
+  // Walk the sorted SA producing BWT chars, but skip the row whose BWT
+  // char would be the sentinel. Its position is recorded in primary_index
+  // so the decoder can reinsert the sentinel before inverting.
   size_t out_i = 0;
   for (size_t i = 0; i < slen; i++) {
-    if (i == sentinel_row)
-      continue;
-    output[out_i++] = encoded[i];
+    if (rots[i].index == 0) {
+      *primary_index = i;
+    } else {
+      output[out_i++] = input_sen[rots[i].index - 1];
+    }
   }
   output[len] = '\0';
 
-  *primary_index = find_primary_index_meta(rots, input_sen, len);
-
-  free(encoded);
   free(rots);
   free(input_sen);
 }
@@ -201,4 +176,33 @@ void bwt_decode(uc *input, size_t len, size_t primary_index, uc *output) {
 
   free(first);
   free(ltf);
+}
+
+void bwt_decode_meta(uc *input, size_t len, size_t primary_index, uc *output) {
+  size_t slen = len + 1;
+
+  // Reinsert the sentinel byte at primary_index to recover the slen-BWT
+  // of (input + sentinel).
+  uc *full = malloc(slen);
+  if (!full)
+    return;
+  memcpy(full, input, primary_index);
+  full[primary_index] = 0x00;
+  memcpy(full + primary_index + 1, input + primary_index, len - primary_index);
+
+  uc *first = build_first_column(full, slen);
+  size_t *ltf = build_ltf_mapping(first, full, slen);
+
+  // Walk slen rows but only emit the first len chars; the slen-th would be
+  // the trailing sentinel.
+  size_t idx = primary_index;
+  for (size_t i = 0; i < len; i++) {
+    output[i] = first[idx];
+    idx = ltf[idx];
+  }
+  output[len] = '\0';
+
+  free(first);
+  free(ltf);
+  free(full);
 }

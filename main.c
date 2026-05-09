@@ -166,8 +166,8 @@ void rle1_decode(const unsigned char *input, size_t len, unsigned char *output,
                  size_t *out_len);
 
 void test_rle() {
-  const unsigned char *input = "aaabccdadd";
-  size_t input_size = strlen(input);
+  const unsigned char *input = (const unsigned char *)"aaabccdadd";
+  size_t input_size = strlen((const char *)input);
   size_t out_len = 0;
 
   unsigned char *output = malloc(2 * input_size);
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
   printf("Encoded_Meta:       %s\n", encoded);
   printf("Primary index: %zu\n", primary_index);
 
-  bwt_decode(encoded, len, primary_index, decoded);
+  bwt_decode_meta(encoded, len, primary_index, decoded);
   printf("Decoded:       %s\n", decoded);
   printf("Match:         %s\n",
          strcmp((char *)input, (char *)decoded) == 0 ? "YES" : "NO");
