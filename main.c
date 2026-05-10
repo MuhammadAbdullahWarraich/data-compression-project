@@ -2,6 +2,7 @@
 // so many empty lines for better readability
 
 #include "block.c"
+#include "huffman.c"
 #include "include/bwt.h"
 #include "third-party/inih/ini.h"
 #include <assert.h>
@@ -211,6 +212,29 @@ void test_blocks() {
   free_block_manager(mgr);
 }
 
+void test_huffman()
+{
+    unsigned char input[] = "aabbbcccc";
+    size_t len = strlen((char *)input);
+
+    unsigned char *compressed = malloc(264 + 2 * len);
+    unsigned char *decompressed = malloc(len + 1);
+    size_t comp_len = 0, decomp_len = 0;
+
+    huffman_encode(input, len, compressed, &comp_len);
+    huffman_decode(compressed, comp_len, decompressed, &decomp_len);
+
+    printf("original:     %s\n", input);
+    printf("decompressed: %s\n", decompressed);
+    if (strcmp((char *)input, (char *)decompressed) == 0)
+        printf("match: YES\n");
+    else
+        printf("match: NO\n");
+
+    free(compressed);
+    free(decompressed);
+}
+
 int main(int argc, char *argv[]) {
 
   configuration config;
@@ -285,6 +309,8 @@ int main(int argc, char *argv[]) {
 
   printf("Block_Testing\n");
   test_blocks();
+  printf("Huffman_Testing\n");
+  test_huffman();
 
   return 0;
 }
