@@ -15,27 +15,28 @@
 void rle2_encode(unsigned char *input, size_t len, unsigned char *output,
                  size_t *out_len) {
 
-  int count = 0;
-  int idx = 0;
+  size_t count = 0;
+  size_t idx = 0;
   for (size_t i = 0; i < len; i++) {
     if (input[i] == SENTINEL) {
       count++;
     } else {
-      if (count > 0) {
-        output[idx] = SENTINEL;
-        output[idx + 1] = (unsigned char)count;
-        idx += 2;
-        count = 0;
+      while (count > 0) {
+        unsigned char chunk = count > 255 ? 255 : (unsigned char)count;
+        output[idx++] = SENTINEL;
+        output[idx++] = chunk;
+        count -= chunk;
       }
       output[idx++] = input[i];
     }
   }
 
   // This is needed if input ends on 0s
-  if (count > 0) {
-    output[idx] = SENTINEL;
-    output[idx + 1] = (unsigned char)count;
-    idx += 2;
+  while (count > 0) {
+    unsigned char chunk = count > 255 ? 255 : (unsigned char)count;
+    output[idx++] = SENTINEL;
+    output[idx++] = chunk;
+    count -= chunk;
   }
 
   *out_len = idx;
@@ -53,6 +54,14 @@ void rle2_decode(unsigned char *input, size_t len, unsigned char *output,
   size_t idx = 0;
   for (size_t i = 0; i < len; i++) {
     if (input[i] == SENTINEL) {
+      if (i + 1 >= len) {
+        fprintf(stderr,
+                "rle2_decode: truncated input — SENTINEL at offset %zu has no "
+                "count byte\n",
+                i);
+        *out_len = idx;
+        return;
+      }
       unsigned char count = input[++i]; // next byte is the run length
       for (unsigned char j = 0; j < count; j++) {
         output[idx++] = SENTINEL;
