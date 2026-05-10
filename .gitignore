@@ -5,3 +5,4 @@ main
 # Test artifacts
 *.bin
 
+compile_commands.json

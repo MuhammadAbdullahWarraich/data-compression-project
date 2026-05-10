@@ -2,7 +2,6 @@
 // so many empty lines for better readability
 
 #include "block.c"
-#include "bwt.c"
 #include "include/bwt.h"
 #include "third-party/inih/ini.h"
 #include <assert.h>
