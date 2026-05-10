@@ -112,7 +112,7 @@ void bwt_encode(uc *input, size_t len, uc *output, size_t *primary_index) {
 
   uc *input_sen = malloc(len + 1);
   memcpy(input_sen, input, len);
-  input_sen[len] = 0x00;
+  input_sen[len] = SENTINEL;
   size_t slen = len + 1;
 
   Rotation *rots = malloc(len * sizeof(Rotation));
@@ -140,7 +140,7 @@ static void get_suffixes(Rotation *rots, uc *input, const size_t len) {
 void bwt_encode_meta(uc *input, size_t len, uc *output, size_t *primary_index) {
   uc *input_sen = malloc(len + 2);
   memcpy(input_sen, input, len);
-  input_sen[len] = 0x00;
+  input_sen[len] = SENTINEL;
   input_sen[len + 1] = '\0';
   size_t slen = len + 1;
 
@@ -187,7 +187,7 @@ void bwt_decode_meta(uc *input, size_t len, size_t primary_index, uc *output) {
   if (!full)
     return;
   memcpy(full, input, primary_index);
-  full[primary_index] = 0x00;
+  full[primary_index] = SENTINEL;
   memcpy(full + primary_index + 1, input + primary_index, len - primary_index);
 
   uc *first = build_first_column(full, slen);

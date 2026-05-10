@@ -9,6 +9,7 @@
 #include <string.h>
 
 #define uc unsigned char
+#define SENTINEL 0x00
 
 typedef struct {
   uc *rotation; // Rotation string
@@ -132,8 +133,8 @@ void bwt_encode_meta(uc *input, size_t len, uc *output, size_t *primary_index);
  * @param output        : Output buffer for original data (must be len+1
  * bytes)
  */
-__attribute__((deprecated(
-    "Pairs with the deprecated O(N^2) bwt_encode. Use bwt_decode_meta instead."))) void
+__attribute__((deprecated("Pairs with the deprecated O(N^2) bwt_encode. Use "
+                          "bwt_decode_meta instead."))) void
 bwt_decode(uc *input, size_t len, size_t primary_index, uc *output);
 
 /*
