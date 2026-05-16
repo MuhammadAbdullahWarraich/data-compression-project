@@ -1,13 +1,16 @@
 #include "huffman.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /*
- * Huffman code representation
+ * Huffman code representation. The code is held in a 32-bit field so that
+ * canonical code lengths up to 32 bits do not silently truncate the way they
+ * did with the old 16-bit storage.
  */
 typedef struct {
-    unsigned short code;        // Huffman code
+    uint32_t      code;         // Huffman code (right-aligned, `length` bits)
     unsigned char length;       // Code length in bits
 } HuffmanCode;
 
@@ -140,7 +143,7 @@ void generate_canonical_codes(HuffmanNode *root, HuffmanCode *codes)
     qsort(sl, count, sizeof(SymbolLength), cmp_symbol_length);
 
     // assign canonical codes
-    unsigned short code = 0;
+    uint32_t code = 0;
     for (int i = 0; i < count; i++)
     {
         if (i > 0 && sl[i].length > sl[i-1].length)
@@ -192,7 +195,7 @@ void encode_data(unsigned char *input, size_t len, HuffmanCode *codes,
 
     for (size_t i = 0; i < len; i++)
     {
-        unsigned short code   = codes[input[i]].code;
+        uint32_t       code   = codes[input[i]].code;
         unsigned char  length = codes[input[i]].length;
 
         for (int b = length - 1; b >= 0; b--)
@@ -291,7 +294,7 @@ void huffman_decode(unsigned char *input, size_t len,
     HuffmanCode codes[256];
     memset(codes, 0, sizeof(codes));
 
-    unsigned short code = 0;
+    uint32_t code = 0;
     for (int i = 0; i < count; i++)
     {
         if (i > 0 && sl[i].length > sl[i-1].length)
@@ -305,7 +308,7 @@ void huffman_decode(unsigned char *input, size_t len,
     size_t  byte_idx       = 264;   // start after header
     int     bit_pos        = 7;
     size_t  j              = 0;
-    unsigned short current_code   = 0;
+    uint32_t       current_code   = 0;
     unsigned char  current_length = 0;
 
     while (j < original_len)

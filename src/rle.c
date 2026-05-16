@@ -45,11 +45,8 @@ void rle1_encode(const unsigned char *input, size_t len, unsigned char *output, 
 size_t get_run_length(const char *input, size_t *offset) {
     size_t i = *offset;
     size_t ans = 0;
-    size_t exp = 1;
     for (; input[i] <= '9' && input[i] >= '0'; i++) {
-        ans *= exp;
-        exp *= 10;
-        ans += (size_t)(input[i] - '0');
+        ans = ans * 10 + (size_t)(input[i] - '0');
     }
     *offset = i;
     return ans;
