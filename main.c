@@ -118,21 +118,57 @@ static long file_size(const char *path) {
 static void usage(const char *prog) {
     fprintf(stderr,
         "Usage:\n"
-        "  %s compress   <input> [output]\n"
-        "  %s decompress <input> [output]\n"
+        "  %s [-c|-d] <input> [output]\n"
+        "\n"
+        "  -c   compress (default)\n"
+        "  -d   decompress\n"
         "\n"
         "Compression parameters are read from config.ini in the current dir.\n"
-        "Default output suffix is .bwtc (compress) / .out (decompress).\n",
-        prog, prog);
+        "If [output] is omitted, the result is written to the current working\n"
+        "directory using the input's basename plus .bwtc (compress) / .out\n"
+        "(decompress).\n",
+        prog);
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
+    if (argc < 2) {
         usage(argv[0]);
         return 1;
     }
-    const char *mode = argv[1];
-    const char *input_path = argv[2];
+
+    bool compress_mode = true;
+    int arg_idx = 1;
+    if (argv[1][0] == '-') {
+        if (strcmp(argv[1], "-c") == 0) {
+            compress_mode = true;
+        } else if (strcmp(argv[1], "-d") == 0) {
+            compress_mode = false;
+        } else {
+            usage(argv[0]);
+            return 1;
+        }
+        arg_idx = 2;
+    }
+
+    if (argc <= arg_idx) {
+        usage(argv[0]);
+        return 1;
+    }
+
+    const char *input_path = argv[arg_idx];
+    const char *user_output = (argc > arg_idx + 1) ? argv[arg_idx + 1] : NULL;
+
+    char default_out[1024];
+    const char *output_path;
+    if (user_output) {
+        output_path = user_output;
+    } else {
+        const char *base = strrchr(input_path, '/');
+        base = base ? base + 1 : input_path;
+        snprintf(default_out, sizeof(default_out), "%s%s", base,
+                 compress_mode ? ".bwtc" : ".out");
+        output_path = default_out;
+    }
 
     configuration config = {0};
     if (ini_parse("config.ini", handler, &config) < 0) {
@@ -140,16 +176,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (strcmp(mode, "compress") == 0) {
-        char default_out[1024];
-        const char *output_path;
-        if (argc >= 4) {
-            output_path = argv[3];
-        } else {
-            snprintf(default_out, sizeof(default_out), "%s.bwtc", input_path);
-            output_path = default_out;
-        }
-
+    if (compress_mode) {
         CompressorConfig cc = {
             .block_size       = config.block_size,
             .rle1_enabled     = config.rle1_enabled,
@@ -179,16 +206,7 @@ int main(int argc, char *argv[]) {
             printf("  time   : %.3f s\n", elapsed);
         }
         return 0;
-    } else if (strcmp(mode, "decompress") == 0) {
-        char default_out[1024];
-        const char *output_path;
-        if (argc >= 4) {
-            output_path = argv[3];
-        } else {
-            snprintf(default_out, sizeof(default_out), "%s.out", input_path);
-            output_path = default_out;
-        }
-
+    } else {
         struct timespec t0, t1;
         clock_gettime(CLOCK_MONOTONIC, &t0);
         int rc = compressor_decompress(input_path, output_path);
@@ -202,8 +220,5 @@ int main(int argc, char *argv[]) {
                    input_path, output_path, elapsed);
         }
         return 0;
-    } else {
-        usage(argv[0]);
-        return 1;
     }
 }

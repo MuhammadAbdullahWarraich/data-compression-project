@@ -22,15 +22,25 @@ Produces `./main`. Object files land in `build/`.
 `config.ini` is read from the current working directory.
 
 ```sh
-./main compress   <input>  [output]   # default output: <input>.bwtc
-./main decompress <input>  [output]   # default output: <input>.out
+./main [-c|-d] <input> [output]
+
+  -c   compress (default if no flag is given)
+  -d   decompress
 ```
 
-Example:
+If `[output]` is omitted, the result is written to the current working
+directory using the input's basename plus `.bwtc` (compress) or `.out`
+(decompress). For example, `./main -c test_cases/small.txt` produces
+`./small.txt.bwtc`, not `test_cases/small.txt.bwtc`.
+
+Examples:
 
 ```sh
-./main compress   test_cases/sample.txt
-./main decompress test_cases/sample.txt.bwtc  recovered.txt
+./main test_cases/sample.txt                       # compress (default) → ./sample.txt.bwtc
+./main -c test_cases/sample.txt                    # same, explicit
+./main -c test_cases/sample.txt out.bwtc           # custom output path
+./main -d sample.txt.bwtc                          # decompress → ./sample.txt.bwtc.out
+./main -d sample.txt.bwtc recovered.txt            # decompress to a chosen path
 diff test_cases/sample.txt recovered.txt
 ```
 
