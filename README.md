@@ -76,7 +76,3 @@ single run.
 |------------------|-----------:|---------:|--------:|---------:|----------:|--------:|---------:|
 | big_text.txt     | 200,000    | 1,236    | 0.0062  | 30.13    | 124       | 0.0006  | 0.19     |
 | medium100k.txt   | 100,000    | 793      | 0.0079  | 6.21     | 121       | 0.0012  | 0.02     |
-
-Compression ratio is in the same ballpark for repetitive text; bzip2 is much
-faster because it uses an O(N log N) suffix-array construction and a
-table-driven Huffman decoder, neither of which this project implements.
