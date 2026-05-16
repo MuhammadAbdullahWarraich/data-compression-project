@@ -1,8 +1,12 @@
 # Build outputs
 main
 *.o
+build/
 
 # Test artifacts
 *.bin
+*.bwtc
+*.out
+*.bz2
 
 compile_commands.json

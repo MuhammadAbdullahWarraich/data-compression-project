@@ -1,4 +1,5 @@
-#include "include/bwt.h"
+#include "rle2.h"
+#include "bwt.h"
 #include <stddef.h>
 #include <stdio.h>
 

@@ -1,4 +1,4 @@
-#include "./include/bwt.h"
+#include "bwt.h"
 #include <stddef.h>
 #include <string.h>
 

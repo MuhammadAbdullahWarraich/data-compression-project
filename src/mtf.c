@@ -1,3 +1,4 @@
+#include "mtf.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
@@ -9,7 +10,9 @@
 * @param len : Length of input
 * @param output : Output buffer for MTF indices
 */
+#ifndef SENTINEL
 #define SENTINEL '\0'
+#endif
 void mtf_encode(unsigned char *input, size_t len, unsigned char *output, size_t *char_count, unsigned char **sorted_chars) {
     bool char_is_in_array[256];
     for (size_t i = 0; i < 256; i++) { char_is_in_array[i] = false; }
@@ -82,6 +85,7 @@ void mtf_decode(unsigned char *input, size_t len, unsigned char *arr, size_t cha
     }
 }
 
+#ifdef MTF_STANDALONE_MAIN
 int main() {
     char input[] = {'f', 'e', 'd', 'c', 'b', 'a', SENTINEL, '\0'};
     const size_t input_size = 7;
@@ -117,3 +121,4 @@ int main() {
     }
     printf(" }\n");
 }
+#endif

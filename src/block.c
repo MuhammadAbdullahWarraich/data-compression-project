@@ -1,24 +1,7 @@
+#include "block.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/*
- * Structure to hold a single block of data
- */
-typedef struct {
-    unsigned char *data;        // Pointer to block data
-    size_t size;                // Current size of block
-    size_t original_size;       // Original size before compression
-} Block;
-
-/*
- * Structure to manage multiple blocks
- */
-typedef struct {
-    Block *blocks;              // Array of blocks
-    int num_blocks;             // Number of blocks
-    size_t block_size;          // Configurable block size
-} BlockManager;
 
 
 /*
@@ -74,6 +57,7 @@ BlockManager *divide_into_blocks(const char *filename, size_t block_size)
         size_t bytes_read = fread(manager->blocks[i].data, 1, this_block_size, f);
         manager->blocks[i].size          = bytes_read;
         manager->blocks[i].original_size = bytes_read;
+        manager->blocks[i].primary_index = 0;
     }
 
     fclose(f);

@@ -1,3 +1,5 @@
+#include "rle.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 // TODO: Implement RLE in-place. You would think we can't encode in-place so easily. eg. abcd -> a1b1c1d1 not only is larger buffer required for encoded value, but also count of a will overwrite b.
