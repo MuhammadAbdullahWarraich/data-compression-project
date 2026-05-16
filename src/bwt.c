@@ -130,11 +130,154 @@ void bwt_encode(uc *input, size_t len, uc *output, size_t *primary_index) {
   free_rotations(rots, len);
 }
 
-static void get_suffixes(Rotation *rots, uc *input, const size_t len) {
-  for (size_t i = 0; i < len; i++) {
-    rots[i].rotation = (uc *)input + i;
-    rots[i].index = i;
-  }
+// ─── PREFIX-DOUBLING SUFFIX ARRAY ────────────────────────────────────────────
+//
+// Adapted from Thomas Mailund's reference implementation:
+// https://mailund.dk/posts/prefix-doubling-attemps/
+//
+// Two-level radix sort, doubling the comparison window (k = 1, 2, 4, …) each
+// round until every suffix has a unique rank. Each round is O(N) thanks to
+// bucket-sort, giving O(N log N) overall.
+//
+// The only deviation from the article is `remap_n`, which takes an explicit
+// length instead of stopping at the first 0 byte — our BWT input contains a
+// 0x00 sentinel that must participate in the SA.
+
+#include <limits.h>
+#include <stdint.h>
+
+#define NO_CHARS (1 << CHAR_BIT)
+#define SWAP(a, b)             \
+    do                         \
+    {                          \
+        __typeof__(a) tmp = a; \
+        a = b;                 \
+        b = tmp;               \
+    } while (0)
+
+static void *faultless_malloc(size_t size)
+{
+    void *mem = malloc(size);
+    if (!mem)
+        abort();
+    return mem;
+}
+
+static uint32_t *remap_n(const unsigned char *x, uint32_t n, uint32_t *sigma)
+{
+    uint32_t alphabet[NO_CHARS] = {0};
+    for (uint32_t i = 0; i < n; i++)
+        alphabet[x[i]] = 1;
+
+    *sigma = 1;
+    for (int a = 0; a < NO_CHARS; a++)
+    {
+        if (alphabet[a])
+            alphabet[a] = (*sigma)++;
+    }
+
+    uint32_t *mapped = faultless_malloc(n * sizeof *mapped);
+    for (uint32_t i = 0; i < n; i++)
+        mapped[i] = alphabet[x[i]];
+
+    return mapped;
+}
+
+static uint32_t *alloc_sa(uint32_t n)
+{
+    uint32_t *sa = faultless_malloc(n * sizeof *sa);
+    for (uint32_t i = 0; i < n; i++)
+    {
+        sa[i] = i;
+    }
+    return sa;
+}
+
+static inline int get_rank(uint32_t n,
+                           uint32_t rank[static n],
+                           int i)
+{
+    return (i < (int)n) ? rank[i] : 0;
+}
+
+static void bsort(uint32_t n,
+                  uint32_t sa[static n],
+                  uint32_t rank[static n],
+                  uint32_t out[static n],
+                  uint32_t k,
+                  uint32_t buckets[static n],
+                  uint32_t sigma)
+{
+    memset(buckets, 0, sigma * sizeof *buckets);
+
+    for (uint32_t i = 0; i < n; i++)
+    {
+        buckets[get_rank(n, rank, sa[i] + k)]++;
+    }
+    for (uint32_t acc = 0, i = 0; i < sigma; i++)
+    {
+        uint32_t b = buckets[i];
+        buckets[i] = acc;
+        acc += b;
+    }
+    for (uint32_t i = 0; i < n; i++)
+    {
+        uint32_t j = sa[i];
+        uint32_t r = get_rank(n, rank, j + k);
+        out[buckets[r]++] = j;
+    }
+}
+
+static uint32_t update_rank(uint32_t n,
+                            uint32_t sa[static n],
+                            uint32_t rank[static n],
+                            uint32_t out[static n],
+                            uint32_t k)
+{
+#define PAIR(i, k) (((uint64_t)rank[sa[i]] << 32) | \
+                    (uint64_t)get_rank(n, rank, sa[i] + k))
+
+    uint32_t sigma = 1;
+    out[sa[0]] = sigma;
+
+    uint64_t prev_pair = PAIR(0, k);
+    for (uint32_t i = 1; i < n; i++)
+    {
+        uint64_t cur_pair = PAIR(i, k);
+        sigma += (prev_pair != cur_pair);
+        prev_pair = cur_pair;
+        out[sa[i]] = sigma;
+    }
+
+    return sigma + 1;
+
+#undef PAIR
+}
+
+// Entry point for the prefix-doubling sort. Drives the loop and owns the
+// scratch buffers; all per-round work is delegated to the static helpers
+// above (remap_n, alloc_sa, bsort, update_rank).
+static uint32_t *sortRotations(const unsigned char *x, uint32_t n)
+{
+    uint32_t sigma;
+    uint32_t *rank    = remap_n(x, n, &sigma);
+    uint32_t *sa      = alloc_sa(n);
+    uint32_t *buckets = faultless_malloc(n * sizeof *buckets);
+    uint32_t *buf     = faultless_malloc(n * sizeof *buf);
+
+    for (uint32_t k = 1; sigma < n + 1; k *= 2)
+    {
+        bsort(n, sa, rank, buf, k, buckets, sigma);
+        bsort(n, buf, rank, sa, 0, buckets, sigma);
+        sigma = update_rank(n, sa, rank, buf, k);
+        SWAP(rank, buf);
+    }
+
+    free(rank);
+    free(buckets);
+    free(buf);
+
+    return sa;
 }
 
 void bwt_encode_meta(uc *input, size_t len, uc *output, size_t *primary_index) {
@@ -144,27 +287,23 @@ void bwt_encode_meta(uc *input, size_t len, uc *output, size_t *primary_index) {
   input_sen[len + 1] = '\0';
   size_t slen = len + 1;
 
-  Rotation *rots = malloc(slen * sizeof(Rotation));
-  if (!rots)
-    return;
-
-  get_suffixes(rots, input_sen, slen);
-  sort_rotations(rots, input_sen, slen);
+  uint32_t *sa = sortRotations(input_sen, (uint32_t)slen);
 
   // Walk the sorted SA producing BWT chars, but skip the row whose BWT
   // char would be the sentinel. Its position is recorded in primary_index
   // so the decoder can reinsert the sentinel before inverting.
   size_t out_i = 0;
   for (size_t i = 0; i < slen; i++) {
-    if (rots[i].index == 0) {
+    uint32_t idx = sa[i];
+    if (idx == 0) {
       *primary_index = i;
     } else {
-      output[out_i++] = input_sen[rots[i].index - 1];
+      output[out_i++] = input_sen[idx - 1];
     }
   }
   output[len] = '\0';
 
-  free(rots);
+  free(sa);
   free(input_sen);
 }
 
