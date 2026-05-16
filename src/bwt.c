@@ -1,6 +1,10 @@
 #include "bwt.h"
+#include <limits.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
+
+// ─── ROTATION HELPERS (used by the matrix BWT path) ──────────────────────────
 
 uc *rotate(uc *input, size_t len) {
   if (len <= 1)
@@ -16,9 +20,6 @@ uc *rotate(uc *input, size_t len) {
 }
 
 void get_rotations(Rotation *rots, uc *input, const size_t len) {
-  // size_t len = sizeof(input) / sizeof(char);
-  // Rotation *rots = malloc(len * sizeof(Rotation));
-
   uc *copy = (uc *)malloc(len + 1);
   memcpy(copy, input, len);
   copy[len] = '\0';
@@ -31,15 +32,6 @@ void get_rotations(Rotation *rots, uc *input, const size_t len) {
   }
 
   free(copy);
-}
-
-int compare_rotations(const void *a, const void *b) {
-  return strcmp((const char *)((const Rotation *)a)->rotation,
-                (const char *)((const Rotation *)b)->rotation);
-}
-
-void sort_rotations(Rotation *rots, uc *input, size_t len) {
-  qsort(rots, len, sizeof(Rotation), compare_rotations);
 }
 
 uc *encode(Rotation *rots, size_t len) {
@@ -108,43 +100,36 @@ void free_rotations(Rotation *rots, size_t len) {
   free(rots);
 }
 
-void bwt_encode(uc *input, size_t len, uc *output, size_t *primary_index) {
+// ─── ROTATION SORTING ────────────────────────────────────────────────────────
+//
+// Two implementations live here:
+//
+//   sort_rotations (DEPRECATED) — qsort + strcmp on materialised rotation
+//   strings. O(N^2 log N) worst case on repetitive inputs. Kept only because
+//   the matrix-BWT path (bwt_encode / bwt_decode) still references it.
+//
+//   sort_rotations_meta — prefix-doubling suffix array. O(N log N) overall.
+//   Used by bwt_encode_meta.
 
-  uc *input_sen = malloc(len + 1);
-  memcpy(input_sen, input, len);
-  input_sen[len] = SENTINEL;
-  size_t slen = len + 1;
-
-  Rotation *rots = malloc(len * sizeof(Rotation));
-  if (!rots)
-    return;
-
-  get_rotations(rots, input_sen, len);
-  sort_rotations(rots, input_sen, len);
-
-  unsigned char *encoded = encode(rots, len);
-  memcpy(output, encoded, len + 1);
-  free(encoded);
-
-  *primary_index = find_primary_index(rots, input_sen, len);
-  free_rotations(rots, len);
+int compare_rotations(const void *a, const void *b) {
+  return strcmp((const char *)((const Rotation *)a)->rotation,
+                (const char *)((const Rotation *)b)->rotation);
 }
 
-// ─── PREFIX-DOUBLING SUFFIX ARRAY ────────────────────────────────────────────
-//
-// Adapted from Thomas Mailund's reference implementation:
+void sort_rotations(Rotation *rots, uc *input, size_t len) {
+  qsort(rots, len, sizeof(Rotation), compare_rotations);
+}
+
+// Prefix-doubling SA, adapted from Thomas Mailund's reference implementation:
 // https://mailund.dk/posts/prefix-doubling-attemps/
 //
-// Two-level radix sort, doubling the comparison window (k = 1, 2, 4, …) each
+// Two-level radix sort, doubling the comparison window (k = 1, 2, 4, ...) each
 // round until every suffix has a unique rank. Each round is O(N) thanks to
 // bucket-sort, giving O(N log N) overall.
 //
-// The only deviation from the article is `remap_n`, which takes an explicit
-// length instead of stopping at the first 0 byte — our BWT input contains a
-// 0x00 sentinel that must participate in the SA.
-
-#include <limits.h>
-#include <stdint.h>
+// Only deviation from the article: remap_n takes an explicit length instead
+// of stopping at the first 0 byte, since our BWT input contains a real 0x00
+// sentinel that must participate in the SA.
 
 #define NO_CHARS (1 << CHAR_BIT)
 #define SWAP(a, b)             \
@@ -255,9 +240,8 @@ static uint32_t update_rank(uint32_t n,
 }
 
 // Entry point for the prefix-doubling sort. Drives the loop and owns the
-// scratch buffers; all per-round work is delegated to the static helpers
-// above (remap_n, alloc_sa, bsort, update_rank).
-static uint32_t *sortRotations(const unsigned char *x, uint32_t n)
+// scratch buffers; per-round work is delegated to the static helpers above.
+static uint32_t *sort_rotations_meta(const unsigned char *x, uint32_t n)
 {
     uint32_t sigma;
     uint32_t *rank    = remap_n(x, n, &sigma);
@@ -280,6 +264,30 @@ static uint32_t *sortRotations(const unsigned char *x, uint32_t n)
     return sa;
 }
 
+// ─── BWT TRANSFORMS ──────────────────────────────────────────────────────────
+
+void bwt_encode(uc *input, size_t len, uc *output, size_t *primary_index) {
+
+  uc *input_sen = malloc(len + 1);
+  memcpy(input_sen, input, len);
+  input_sen[len] = SENTINEL;
+  size_t slen = len + 1;
+
+  Rotation *rots = malloc(len * sizeof(Rotation));
+  if (!rots)
+    return;
+
+  get_rotations(rots, input_sen, len);
+  sort_rotations(rots, input_sen, len);
+
+  unsigned char *encoded = encode(rots, len);
+  memcpy(output, encoded, len + 1);
+  free(encoded);
+
+  *primary_index = find_primary_index(rots, input_sen, len);
+  free_rotations(rots, len);
+}
+
 void bwt_encode_meta(uc *input, size_t len, uc *output, size_t *primary_index) {
   uc *input_sen = malloc(len + 2);
   memcpy(input_sen, input, len);
@@ -287,7 +295,7 @@ void bwt_encode_meta(uc *input, size_t len, uc *output, size_t *primary_index) {
   input_sen[len + 1] = '\0';
   size_t slen = len + 1;
 
-  uint32_t *sa = sortRotations(input_sen, (uint32_t)slen);
+  uint32_t *sa = sort_rotations_meta(input_sen, (uint32_t)slen);
 
   // Walk the sorted SA producing BWT chars, but skip the row whose BWT
   // char would be the sentinel. Its position is recorded in primary_index

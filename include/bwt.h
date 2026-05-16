@@ -44,12 +44,16 @@ Compares two rotations for sorting
 int compare_rotations(const void *a, const void *b);
 
 /*
-Sorts the given Rotation array lexicographically using qsort
+Sorts the given Rotation array lexicographically using qsort.
 @param rots : Rotation array
 @param input: the original input string which is to be rotated
 @param len  : the length of the input
 */
-void sort_rotations(Rotation *rots, uc *input, size_t len);
+__attribute__((deprecated(
+    "qsort + strcmp on rotations is O(N^2 log N) worst case. The new "
+    "prefix-doubling SA inside bwt_encode_meta replaces this; sort_rotations "
+    "is kept only because the deprecated matrix-BWT path still uses it."))) void
+sort_rotations(Rotation *rots, uc *input, size_t len);
 
 /*
 Extracts the last column of the sorted rotation matrix to form the BWT encoded
